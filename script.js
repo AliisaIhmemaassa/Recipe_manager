@@ -23,7 +23,7 @@ let servingsMultiplier = 1;
 let filterTag = 'all';
 let searchQ = '';
 let ingFilter = '';
-let uploadedImageData = null;
+let uploadedImages = [];
 
 // ── Language ───────────────────────────────────────────────────────────────────
 
@@ -41,7 +41,7 @@ const langsList =
     Browse_tags: ['Savory', 'Sweet'],
     Browse_noresult: 'No recipes match — try different filters or add one.',
 
-    Deatils_Ingredients: 'Ingredients',
+    Details_Ingredients: 'Ingredients',
     Details_Instructions: 'Instructions',
     Deatails_UnitsConverted: 'Some units have been converted from imperial to metric. Original values shown in brackets.',
     Details_Servings: 'Servings',
@@ -64,7 +64,7 @@ const langsList =
     Browse_tags: ['Suolainen', 'Makea'],
     Browse_noresult: 'Ei tuloksia — yritä eri suodattimia.',
 
-    Deatils_Ingredients: 'Ainesosat',
+    Details_Ingredients: 'Ainesosat',
     Details_Instructions: 'Valmistusohjeet',
     Deatails_UnitsConverted: 'Joitain arvoja on muunnettu metrijärjestelmään. Alkuperäiset suluissa.',
     Details_Servings: 'Annokset',
@@ -138,9 +138,9 @@ const SAMPLE = [
 // ── Unit conversion ───────────────────────────────────────────────────────────
 
 function closestVolumeUnit(ml) {
-  if (ml < 5)   return { amount: parseFloat((ml / 5).toFixed(2)), unit: 'tsp' };
-  if (ml < 20)  return { amount: parseFloat((ml / 5).toFixed(1)), unit: 'tsp' };
-  if (ml < 60)  return { amount: parseFloat((ml / 15).toFixed(1)), unit: 'tbsp' };
+  if (ml < 5)   return { amount: parseFloat((ml / 5).toFixed(2)), unit: 'tl' };
+  if (ml < 20)  return { amount: parseFloat((ml / 5).toFixed(1)), unit: 'tl' };
+  if (ml < 60)  return { amount: parseFloat((ml / 15).toFixed(1)), unit: 'rkl' };
   if (ml < 900) return { amount: parseFloat((ml / 100).toFixed(1)), unit: 'dl' };
   return { amount: parseFloat((ml / 1000).toFixed(2)), unit: 'l' };
 }
@@ -175,8 +175,13 @@ function convertIngredient(ing) {
 }
 
 function convertRecipeUnits(recipe) {
-  const ingredients = recipe.ingredients.map(convertIngredient);
-  const hasConversions = ingredients.some(i => i.original);
+  const ingredients = Object.fromEntries(
+    Object.entries(recipe.ingredients).map(([header, ings]) => [
+      header,
+      ings.map(convertIngredient)
+    ])
+  );
+  const hasConversions = Object.values(ingredients).flat().some(i => i.original);
   return { ...recipe, ingredients, hasConversions };
 }
 
@@ -197,12 +202,12 @@ function filteredRecipes() {
   if (filterTag !== 'all') r = r.filter(x => x.tags.includes(filterTag));
   if (searchQ) r = r.filter(x =>
     x.name.toLowerCase().includes(searchQ.toLowerCase()) ||
-    x.ingredients.some(i => i.name.toLowerCase().includes(searchQ.toLowerCase()))
+    Object.values(x.ingredients).flat().some(i => i.name.toLowerCase().includes(searchQ.toLowerCase()))
   );
   if (ingFilter) {
     const ings = ingFilter.toLowerCase().split(',').map(s => s.trim()).filter(Boolean);
     if (ings.length > 0) {
-      r = r.filter(x => ings.every(i => x.ingredients.some(ing => ing.name.toLowerCase().includes(i))));
+      r = r.filter(x => ings.every(i => Object.values(x.ingredients).flat().some(ing => ing.name.toLowerCase().includes(i))));
     }
   }
   return r;
@@ -235,6 +240,9 @@ function render() {
   } else if (view === 'detail') {
     detailTab.style.display = 'block';
     renderDetail();
+  } else if (view === 'edit') {
+    addTab.style.display = 'block';
+    renderEdit();
   }
 
   attachEvents();
@@ -246,7 +254,7 @@ function renderSearch() {
     <div class="topbar">
       <h1><i class="ti ti-chef-hat" aria-hidden="true" style="margin-right:8px"></i>${language.Browse_head}</h1>
       <div style="display:flex;gap:8px">
-        <button class="view-btn active" data-v="browse"><i class="ti ti-layout-grid"></i></button>
+        <button class="view-btn active" data-v="browse" onclick=debug();><i class="ti ti-layout-grid"></i></button>
         <button class="view-btn" data-v="add"><i class="ti ti-plus"></i> ${language.Add}</button>
       </div>
     </div>
@@ -286,6 +294,15 @@ function renderResults() {
     }`;
 }
 
+function debug() {
+  recipes = JSON.parse(localStorage.getItem('recipe_manager_v1'));
+  recipes = recipes.filter(x => x.id !== 'r111111111111111'); // replace with the actual id
+  //recipes = recipes.filter(x => x.id !== 'r1781776548504');
+  //recipes = recipes.filter(x => x.id !== 'r1781771903948');
+  localStorage.setItem('recipe_manager_v1', JSON.stringify(recipes));
+  location.reload();
+}
+
 function renderAdd() {
   const div = document.getElementById('add-tab');
   div.innerHTML = `
@@ -300,10 +317,10 @@ function renderAdd() {
       <label>Or upload a photo / image of a recipe</label>
       <div class="upload-area" id="upload-area">
         <i class="ti ti-camera" aria-hidden="true"></i>
-        Click to upload an image
+        Click to upload images
       </div>
-      <input type="file" id="file-input" accept="image/*">
-      <div id="img-preview" style="margin-top:8px"></div>
+      <input type="file" id="file-input" accept="image/*" multiple>
+      <div id="img-preview" style="margin-top:8px;display:flex;gap:8px;flex-wrap:wrap;"></div>
       <div class="btn-row">
         <button class="btn-primary" id="parse-btn">
           <i class="ti ti-wand" aria-hidden="true"></i> Parse with AI
@@ -323,10 +340,15 @@ function renderDetail() {
     <div class="topbar">
       <button class="view-btn" data-v="browse"><i class="ti ti-arrow-left"></i> ${language.Back}</button>
       <h1>${r.name}</h1>
-      ${isUser ? `<button class="btn-danger" id="delete-btn" aria-label="Delete recipe"><i class="ti ti-trash" aria-hidden="true"></i></button>` : ''}
+      ${isUser ? `
+        <button class="btn-danger" id="delete-btn" aria-label="Delete recipe"><i class="ti ti-trash" aria-hidden="true"></i></button>
+        <button class="view-btn" id="edit-btn" onclick="view='edit';render();" aria-label="Edit recipe"><i class="ti ti-edit"></i></button>
+      ` : ''}
     </div>
 
     <div class="detail">
+
+      ${r.image ? `<img src="${r.image}" style="width:100%;max-height:220px;object-fit:cover;border-radius:12px;margin-bottom:12px">` : ''}
 
       <div class="detail-meta">
         <span><i class="ti ti-clock" aria-hidden="true"></i>${r.time} min</span>
@@ -347,27 +369,135 @@ function renderDetail() {
       </div>
 
       <div>
-        <h3 style="font-size:16px;font-weight:500;margin-bottom:12px">${language.Deatils_Ingredients}</h3>
+        <h3 style="font-size:16px;font-weight:500;margin-bottom:12px">${language.Details_Ingredients}</h3>
         <div class="ingredients-list">
-          ${r.ingredients.map(i => `
-            <div class="ing-row">
-              <span class="ing-amount">${fmtAmount(i.amount, mult)} ${i.unit}${i.original ? `<span class="original-unit">(${i.original})</span>` : ''}</span>
-              <span>${i.name}</span>
-            </div>`).join('')}
+          ${Object.entries(r.ingredients).map(([header, ings]) => `
+            ${header !== 'none' ? `<div class="ing-header">${header}</div>` : ''}
+            ${ings.map(i => `
+              <div class="ing-row">
+                <span class="ing-amount">${i.amounts.map(a => `${fmtAmount(a.amount, mult)} ${a.unit}`).join(' / ')}</span>
+                <span>${i.name}</span>
+              </div>`).join('')}
+          `).join('')}
         </div>
       </div>
 
       <div>
         <h3 style="font-size:16px;font-weight:500;margin-bottom:12px">${language.Details_Instructions}</h3>
         <div class="steps-list">
-          ${r.steps.map((s, i) => `
-            <div class="step-row">
-              <div class="step-num">${i + 1}</div>
-              <div class="step-text">${s}</div>
-            </div>`).join('')}
+          ${(() => {
+            let counter = 1;
+            return Object.entries(r.steps).map(([header, steps]) => `
+              ${header !== 'none' ? `<div class="ing-header">${header}</div>` : ''}
+              ${steps.map(s => `
+                <div class="step-row">
+                  <div class="step-num">${counter++}</div>
+                  <div class="step-text">${s}</div>
+                </div>`).join('')}
+            `).join('');
+          })()}
         </div>
       </div>
     </div>`;
+}
+
+function renderEdit() {
+  const r = getRecipes().find(x => x.id === detailId);
+  if (!r) { view = 'browse'; render(); return; }
+  const div = document.getElementById('add-tab');
+  div.innerHTML = `
+    <div class="topbar">
+      <button class="view-btn" data-v="detail"><i class="ti ti-arrow-left"></i> ${language.Back}</button>
+      <h1>Edit recipe</h1>
+    </div>
+    <div class="panel">
+      <label>Recipe image (optional)</label>
+      <div class="upload-area" id="upload-area">
+        <i class="ti ti-camera" aria-hidden="true"></i>
+        ${r.image ? 'Replace image' : 'Click to upload an image'}
+      </div>
+      <input type="file" id="file-input" accept="image/*">
+      <div id="img-preview" style="margin-top:8px">
+        ${r.image ? `<img src="${r.image}" style="max-width:120px;max-height:120px;border-radius:8px;border:0.5px solid rgba(0,0,0,0.12)">` : ''}
+      </div>
+
+      <label>Name</label>
+      <input type="text" id="edit-name" value="${r.name}">
+      <label>Time (min)</label>
+      <input type="number" id="edit-time" value="${r.time}">
+      <label>Servings</label>
+      <input type="number" id="edit-servings" value="${r.servings}">
+      <label>Ingredients (one per line: amount unit name)</label>
+
+      <textarea id="edit-ingredients">${
+        Object.entries(r.ingredients).map(([h, ings]) =>
+          (h !== 'none' ? `[${h}]\n` : '') +
+          ings.map(i => i.amounts.map(a => `${a.amount} ${a.unit}`).join(' / ') + ' | ' + i.name).join('\n')
+        ).join('\n\n')
+      }</textarea>
+      <label>Steps (one per line)</label>
+      <textarea id="edit-steps">${
+        Object.entries(r.steps).map(([h, steps]) =>
+          (h !== 'none' ? `[${h}]\n` : '') + steps.join('\n')
+        ).join('\n\n')
+      }</textarea>
+      <div class="btn-row">
+        <button class="btn-primary" id="save-edit-btn">Save</button>
+      </div>
+    </div>`;
+}
+
+function saveEdit() {
+  const r = getRecipes().find(x => x.id === detailId);
+
+  const parseSection = (text) => {
+    const result = {};
+    let header = 'none';
+    text.split('\n').forEach(line => {
+      line = line.trim();
+      if (!line) return;
+      const m = line.match(/^\[(.+)\]$/);
+      if (m) { header = m[1]; return; }
+      if (!result[header]) result[header] = [];
+      result[header].push(line);
+    });
+    return result;
+  };
+
+  const rawIngs = parseSection(document.getElementById('edit-ingredients').value);
+  const ingredients = Object.fromEntries(
+    Object.entries(rawIngs).map(([h, lines]) => [h,
+      lines.map(line => {
+        const [amountsPart, ...nameParts] = line.split('|');
+        const name = nameParts.join('|').trim();
+        const amounts = amountsPart.split('/').map(s => {
+          const [amount, unit] = s.trim().split(' ');
+          return { amount: parseFloat(amount) || 0, unit: unit || '' };
+        });
+        return { name, amounts };
+      })
+    ])
+  );
+
+  let image = r.image || null;
+  const newImg = document.getElementById('img-preview')?.querySelector('img');
+  if (newImg && newImg.src.startsWith('data:')) image = newImg.src;
+
+  const updated = {
+    ...r,
+    name: document.getElementById('edit-name').value,
+    image,
+    time: parseInt(document.getElementById('edit-time').value) || r.time,
+    servings: parseInt(document.getElementById('edit-servings').value) || r.servings,
+    ingredients,
+    steps: parseSection(document.getElementById('edit-steps').value),
+    hasConversions: false
+  };
+
+  recipes = recipes.map(x => x.id === detailId ? updated : x);
+  saveRecipes(recipes);
+  view = 'detail';
+  render();
 }
 
 // ── Events ────────────────────────────────────────────────────────────────────
@@ -432,6 +562,10 @@ function attachEvents() {
     render();
   });
 
+  // Edit recipe
+  //const eb = document.getElementById('edit-btn');
+  //if (eb) eb.addEventListener('click', () => { view = 'edit'; render(); });
+
   // Delete recipe
   const db = document.getElementById('delete-btn');
   if (db) db.addEventListener('click', () => {
@@ -443,23 +577,31 @@ function attachEvents() {
     }
   });
 
+  // Save edit
+  const sb = document.getElementById('save-edit-btn');
+  if (sb) sb.addEventListener('click', saveEdit);
+
   // Image upload
   const ua = document.getElementById('upload-area');
   const fi = document.getElementById('file-input');
   if (ua && fi) {
     ua.addEventListener('click', () => fi.click());
     fi.addEventListener('change', e => {
-      const file = e.target.files[0];
-      if (!file) return;
-      const reader = new FileReader();
-      reader.onload = ev => {
-        uploadedImageData = ev.target.result.split(',')[1];
-        const prev = document.getElementById('img-preview');
-        if (prev) prev.innerHTML = `<img src="${ev.target.result}" style="max-width:100%;max-height:180px;border-radius:8px;border:0.5px solid rgba(0,0,0,0.12)">`;
-        const ua2 = document.getElementById('upload-area');
-        if (ua2) ua2.innerHTML = `<i class="ti ti-check" aria-hidden="true"></i> ${file.name}`;
-      };
-      reader.readAsDataURL(file);
+      const files = Array.from(e.target.files);
+      if (!files.length) return;
+      const prev = document.getElementById('img-preview');
+      
+      files.forEach(file => {
+        const reader = new FileReader();
+        reader.onload = ev => {
+          uploadedImages.push({ data: ev.target.result.split(',')[1], type: file.type || 'image/jpeg' });
+          if (prev) prev.innerHTML += `<img src="${ev.target.result}" style="max-width:120px;max-height:120px;border-radius:8px;border:0.5px solid rgba(0,0,0,0.12)">`;
+        };
+        reader.readAsDataURL(file);
+      });
+
+      const ua2 = document.getElementById('upload-area');
+      if (ua2) ua2.innerHTML = `<i class="ti ti-check" aria-hidden="true"></i> ${files.length} image(s) selected`;
     });
   }
 
@@ -475,7 +617,7 @@ async function parseRecipe() {
   const status = document.getElementById('parse-status');
   const btn = document.getElementById('parse-btn');
 
-  if (!text && !uploadedImageData) {
+  if (!text && uploadedImages.length === 0) {
     status.textContent = 'Please paste text or upload an image first.';
     return;
   }
@@ -484,26 +626,33 @@ async function parseRecipe() {
   status.textContent = 'Parsing with AI…';
 
   const userContent = [];
-  if (uploadedImageData) {
-    userContent.push({ type: 'image', source: { type: 'base64', media_type: 'image/jpeg', data: uploadedImageData } });
-  }
+
+  uploadedImages.forEach(img => {
+    userContent.push({ type: 'image', source: { type: 'base64', media_type: img.type, data: img.data } });
+  });
+
   if (text) {
     userContent.push({ type: 'text', text });
   }
   userContent.push({
     type: 'text',
     text: `Extract the recipe and return ONLY a JSON object (no markdown, no backticks) with this exact shape:
-{"name":"string","servings":number,"time":number,"tags":["string"],"ingredients":[{"name":"string","amount":number,"unit":"string"}],"steps":["string"]}
+{"name":"string","servings":number,"time":number,"tags":["string"],"ingredients":{"Header name":[{"name":"string","amounts":[{"amount":number,"unit":"string"}]}]},"steps":{"Section name":["string"]}}
 - time: integer in total minutes (estimate if not given, no unit)
 - tags: 'Sweet' or 'Savory' (Only one!)
-- unit: can be g, kg, ml, l, tbsp, tsp, dl, cup, oz, lb, fl oz, or empty string for countable items — preserve the original unit from the source exactly, do not convert units yourself
-- steps: list. plain strings without step numbers`
+- ingredients is an object where keys are section headers (use "none" if no sections)
+- if an ingredient has multiple amounts/units (e.g. "5dl (300g)"), list each as a separate object in amounts
+- if only one amount, amounts still has just one entry
+- unit: can be g, kg, ml, l, tbsp, tsp, tl, rkl, dl, cup, oz, lb, fl oz, or empty string for countable items — preserve the original unit from the source exactly, do not convert units yourself
+- steps is an object where keys are section headers (use "none" if no sections), do not include step numbers`
   });
 
   try {
-    const res = await fetch('https://api.anthropic.com/v1/messages', {
+    const res = await fetch('http://localhost:3000', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+      },
       body: JSON.stringify({
         model: 'claude-sonnet-4-6',
         max_tokens: 1000,
@@ -511,6 +660,7 @@ async function parseRecipe() {
       })
     });
     const data = await res.json();
+    console.log(data.content[0].text);
     const raw = data.content.map(c => c.text || '').join('');
     const clean = raw.replace(/```json|```/g, '').trim();
     const parsed = JSON.parse(clean);
@@ -523,7 +673,7 @@ async function parseRecipe() {
     saveRecipes(recipes);
     detailId = converted.id;
     servingsMultiplier = 1;
-    uploadedImageData = null;
+    uploadedImages = [];
     view = 'detail';
     render();
   } catch (e) {
