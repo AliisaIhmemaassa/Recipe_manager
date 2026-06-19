@@ -295,9 +295,12 @@ function renderResults() {
       ? `<div class="empty"><i class="ti ti-inbox" aria-hidden="true"></i>${language.Browse_noresult}</div>`
       : `<div class="grid">${list.map(r => `
           <div class="recipe-card" data-id="${r.id}">
-            <h3>${r.name}</h3>
-            <div class="meta"><i class="ti ti-clock" aria-hidden="true"></i> ${r.time} min &nbsp;<i class="ti ti-users" aria-hidden="true"></i> ${r.servings}</div>
-            <div class="tags">${r.tags.map(t => `<span class="pill">${t}</span>`).join('')}</div>
+            ${r.image ? `<div class="recipe-card-image" style="background-image:url('${r.image}')"></div>` : ''}
+            <div class="recipe-card-body">
+              <h3>${r.name}</h3>
+              <div class="meta"><i class="ti ti-clock" aria-hidden="true"></i> ${r.time} min &nbsp;<i class="ti ti-users" aria-hidden="true"></i> ${r.servings}</div>
+              <div class="tags">${r.tags.map(t => `<span class="pill">${t}</span>`).join('')}</div>
+            </div>
           </div>`).join('')}
         </div>`
     }`;
@@ -668,7 +671,7 @@ async function parseRecipe() {
       },
       body: JSON.stringify({
         model: 'claude-sonnet-4-6',
-        max_tokens: 1000,
+        max_tokens: 4000,
         messages: [{ role: 'user', content: userContent }]
       })
     });
