@@ -94,13 +94,6 @@ button:active { transform: scale(0.98); }
 .app {
   max-width: 1000px;
   margin: 0 auto;
-
-  background: var(--surface);
-  border: 0.5px solid var(--border);
-  border-radius: var(--radius);
-  padding: 1.5rem;
-  margin-top: 1.25rem;
-  margin-bottom: 1.25rem;
 }
 
 /* Topbar */
@@ -184,7 +177,7 @@ button:active { transform: scale(0.98); }
   display: flex;
   flex-direction: column;
   justify-content: flex-end;
-  min-height: 80px;
+  min-height: 200px;
   background: var(--bg);
   border: 0.5px solid var(--border);
   border-radius: var(--radius-lg);
@@ -221,6 +214,7 @@ button:active { transform: scale(0.98); }
 }
 
 .recipe-card-body {
+  margin-top: auto;
   padding: 1rem;
 }
 
@@ -247,6 +241,20 @@ button:active { transform: scale(0.98); }
 }
 
 /* Add panel */
+
+.add-tab {
+  background: var(--surface);
+  border: 0.5px solid var(--border);
+  border-radius: var(--radius);
+  padding: 1.5rem;
+  margin-top: 1.25rem;
+  margin-bottom: 1.25rem;
+}
+
+.add-img {
+  margin-top:8px;display:flex;gap:8px;flex-wrap:wrap;
+}
+
 .panel {
   background: var(--bg);
   border: 0.5px solid var(--border);
@@ -325,6 +333,30 @@ input[type=file] { display: none; }
 }
 
 /* Detail view */
+
+.detail-tab {
+  background: var(--surface);
+  border: 0.5px solid var(--border);
+  border-radius: var(--radius);
+  padding: 1.5rem;
+  margin-top: 1.25rem;
+  margin-bottom: 1.25rem;
+}
+
+.detail-tab h3 {
+  font-size: 16px;
+  font-weight: 500;
+  margin-bottom: 12px;
+}
+
+.de-img {
+  width: 100%;
+  max-height: 220px;
+  object-fit: cover;
+  border-radius: 12px;
+  margin-bottom: 12px
+}
+
 .detail {
   display: flex;
   flex-direction: column;
@@ -382,6 +414,18 @@ input[type=file] { display: none; }
   flex-direction: column;
   gap: 0;
 }
+
+.ing-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 0;
+  margin-top: 12px;
+  color: var(--text);
+  font-size: 14px;
+  font-weight: 500;
+}
+
 .ing-row {
   display: flex;
   align-items: center;
@@ -390,7 +434,9 @@ input[type=file] { display: none; }
   border-bottom: 0.5px solid var(--border);
   font-size: 14px;
 }
+
 .ing-row:last-child { border-bottom: none; }
+
 .ing-amount {
   font-weight: 500;
   min-width: 90px;

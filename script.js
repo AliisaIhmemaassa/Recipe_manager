@@ -25,65 +25,6 @@ let searchQ = '';
 let ingFilter = '';
 let uploadedImages = [];
 
-// ── Language ───────────────────────────────────────────────────────────────────
-
-const langsList = 
-{
-  english: {
-    Add: 'Add',
-    All: 'All',
-    Back: 'Back',
-
-    Browse_head: 'Recipes',
-    Browse_search_1: 'Search recipes or ingredients…',
-    Browse_search_span: 'Filter by ingredients I have (comma-separated)',
-    Browse_search_2: 'e.g. eggs, garlic, lemon',
-    Browse_tags: ['Savory', 'Sweet'],
-    Browse_noresult: 'No recipes match — try different filters or add one.',
-
-    Details_Ingredients: 'Ingredients',
-    Details_Instructions: 'Instructions',
-    Deatails_UnitsConverted: 'Some units have been converted from imperial to metric. Original values shown in brackets.',
-    Details_Servings: 'Servings',
-
-    Savory: 'Savory',
-    Sweet: 'Sweet'
-
-      
-  },
-
-  finnish: {
-    Add: 'Lisää',
-    All: 'Kaikki',
-    Back: 'Takaisin',
-
-    Browse_head: 'Reseptit',
-    Browse_search_1: 'Etsi reseptejä tai ainesosia…',
-    Browse_search_span: 'Suodata ainesosien perusteella (erotetaan pilkulla)',
-    Browse_search_2: 'esim. muna, valkosipuli, sitruuna',
-    Browse_tags: ['Suolainen', 'Makea'],
-    Browse_noresult: 'Ei tuloksia — yritä eri suodattimia.',
-
-    Details_Ingredients: 'Ainesosat',
-    Details_Instructions: 'Valmistusohjeet',
-    Details_UnitsConverted: 'Joitain arvoja on muunnettu metrijärjestelmään. Alkuperäiset suluissa.',
-    Details_Servings: 'Annokset',
-
-    Savory: 'Suolainen',
-    Sweet: 'Makea'
-  }
-}
-
-let currentLang = localStorage.getItem('language') ?? 'english';
-let language = langsList[currentLang];
-
-function changeLanguage() {
-  currentLang = currentLang === 'english' ? 'finnish' : 'english';
-  language = langsList[currentLang];
-  localStorage.setItem('language', currentLang);
-  render();
-}
-
 // ── Sample data (shown when collection is empty) ──────────────────────────────
 
 const SAMPLE = [
@@ -143,6 +84,79 @@ const SAMPLE = [
   }
 ];
 
+// ── Language ───────────────────────────────────────────────────────────────────
+
+const langsList = 
+{
+  english: {
+    Add: 'Add',
+    All: 'All',
+    Back: 'Back',
+
+    Browse_head: 'Recipes',
+    Browse_search_1: 'Search recipes or ingredients…',
+    Browse_search_span: 'Filter by ingredients I have (comma-separated)',
+    Browse_search_2: 'e.g. eggs, garlic, lemon',
+    Browse_tags: ['savory', 'sweet'],
+    Browse_noresult: 'No recipes match — try different filters or add one.',
+
+    Details_Ingredients: 'Ingredients',
+    Details_Instructions: 'Instructions',
+    Deatails_UnitsConverted: 'Some units have been converted from imperial to metric. Original values shown in brackets.',
+    Details_Servings: 'Servings',
+
+    Savory: 'savory',
+    Sweet: 'sweet'
+
+      
+  },
+
+  finnish: {
+    Add: 'Lisää',
+    All: 'Kaikki',
+    Back: 'Takaisin',
+
+    Browse_head: 'Reseptit',
+    Browse_search_1: 'Etsi reseptejä tai ainesosia…',
+    Browse_search_span: 'Suodata ainesosien perusteella (erotetaan pilkulla)',
+    Browse_search_2: 'esim. muna, valkosipuli, sitruuna',
+    Browse_tags: ['suolainen', 'makea'],
+    Browse_noresult: 'Ei tuloksia — yritä eri suodattimia.',
+
+    Details_Ingredients: 'Ainesosat',
+    Details_Instructions: 'Valmistusohjeet',
+    Details_UnitsConverted: 'Joitain arvoja on muunnettu metrijärjestelmään. Alkuperäiset suluissa.',
+    Details_Servings: 'Annokset',
+
+    Savory: 'suolainen',
+    Sweet: 'makea'
+  }
+}
+
+let currentLang = localStorage.getItem('language') ?? 'english';
+let language = langsList[currentLang];
+
+function changeLanguage() {
+  currentLang = currentLang === 'english' ? 'finnish' : 'english';
+  language = langsList[currentLang];
+  localStorage.setItem('language', currentLang);
+  render();
+}
+
+// ── Translate units ───────────────────────────────────────────────────────────
+
+function translateUnits(u) {
+  if (localStorage.getItem('language') === 'finnish'){
+    if (u === 'tsp') {return 'tl'};
+    if (u === 'tbsp') {return 'rkl'};
+  }
+  else {
+      if (u === 'tl') {return 'tsp'};
+      if (u === 'rkl') {return 'tbsp'};
+    }
+  return u
+}
+
 // ── Unit conversion ───────────────────────────────────────────────────────────
 
 function closestVolumeUnit(ml) {
@@ -153,33 +167,38 @@ function closestVolumeUnit(ml) {
   return { amount: parseFloat((ml / 1000).toFixed(3)), unit: 'l' };
 }
 
-function convertIngredient(ing) {
-  const u = (ing.unit || '').toLowerCase().trim();
-  const a = ing.amount;
+function convertAmount(a) {
+  const u = (a.unit || '').toLowerCase().trim();
+  const amt = a.amount;
 
   // Weight: imperial → g
   if (u === 'oz' || u === 'ounce' || u === 'ounces') {
-    return { ...ing, amount: Math.round(a * 28.35), unit: 'g', original: `${a} ${ing.unit}` };
+    return { amount: Math.round(amt * 28.35), unit: 'g', original: `${amt} ${a.unit}` };
   }
   if (u === 'lb' || u === 'lbs' || u === 'pound' || u === 'pounds') {
-    return { ...ing, amount: Math.round(a * 453.59), unit: 'g', original: `${a} ${ing.unit}` };
+    return { amount: Math.round(amt * 453.59), unit: 'g', original: `${amt} ${a.unit}` };
   }
 
   // Volume: imperial → ml → closest metric label
   let ml = null;
-  if (u === 'cup' || u === 'cups')                              ml = a * 240;
+  if (u === 'cup' || u === 'cups')                              ml = amt * 240;
   if (u === 'fl oz' || u === 'fl.oz' || u === 'fluid oz' || 
-    u === 'fluid ounce' || u === 'fluid ounces')                ml = a * 29.57;
-  if (u === 'pint' || u === 'pints' || u === 'pt')              ml = a * 473;
-  if (u === 'quart' || u === 'quarts' || u === 'qt')            ml = a * 946;
-  if (u === 'gallon' || u === 'gallons' || u === 'gal')         ml = a * 3785;
+    u === 'fluid ounce' || u === 'fluid ounces')                ml = amt * 29.57;
+  if (u === 'pint' || u === 'pints' || u === 'pt')              ml = amt * 473;
+  if (u === 'quart' || u === 'quarts' || u === 'qt')            ml = amt * 946;
+  if (u === 'gallon' || u === 'gallons' || u === 'gal')         ml = amt * 3785;
 
   if (ml !== null) {
     const { amount: ca, unit: cu } = closestVolumeUnit(ml);
-    return { ...ing, amount: ca, unit: cu, original: `${a} ${ing.unit}` };
+    return { amount: ca, unit: cu, original: `${amt} ${a.unit}` };
   }
 
-  return { ...ing, original: null };
+  return { ...a, original: null };
+}
+
+function convertIngredient(ing) {
+  const [first, ...rest] = ing.amounts;
+  return { ...ing, amounts: [convertAmount(first), ...rest] };
 }
 
 function convertRecipeUnits(recipe) {
@@ -189,7 +208,7 @@ function convertRecipeUnits(recipe) {
       ings.map(convertIngredient)
     ])
   );
-  const hasConversions = Object.values(ingredients).flat().some(i => i.original);
+  const hasConversions = Object.values(ingredients).flat().some(i => i.amounts[0]?.original);
   return { ...recipe, ingredients, hasConversions };
 }
 
@@ -332,7 +351,7 @@ function renderAdd() {
         Click to upload images
       </div>
       <input type="file" id="file-input" accept="image/*" multiple>
-      <div id="img-preview" style="margin-top:8px;display:flex;gap:8px;flex-wrap:wrap;"></div>
+      <div id="img-preview" class="add-img"></div>
       <div class="btn-row">
         <button class="btn-primary" id="parse-btn">
           <i class="ti ti-wand" aria-hidden="true"></i> Parse with AI
@@ -361,7 +380,7 @@ function renderDetail() {
 
     <div class="detail">
 
-      ${r.image ? `<img src="${r.image}" style="width:100%;max-height:220px;object-fit:cover;border-radius:12px;margin-bottom:12px">` : ''}
+      ${r.image ? `<img src="${r.image}" class="de-img">` : ''}
 
       <div class="detail-meta">
         <span><i class="ti ti-clock" aria-hidden="true"></i>${r.time} min</span>
@@ -382,15 +401,16 @@ function renderDetail() {
       </div>
 
       <div>
-        <h3 style="font-size:16px;font-weight:500;margin-bottom:12px">${language.Details_Ingredients}</h3>
+        <h3>${language.Details_Ingredients}</h3>
         <div class="ingredients-list">
           ${Object.entries(r.ingredients).map(([header, ings]) => `
-            ${header !== 'none' ? `<div class="ing-header">${header}</div>` : ''}
+            ${header !== 'none' ? `<div class="ing-head">${header}</div>` : ''}
             ${ings.map(i => `
               <div class="ing-row">
                 <span class="ing-amount">
-                  ${i.amounts.map(a => a.amount === 0 ? '' : `${fmtAmount(a.amount, mult)} ${a.unit}`)
+                  ${i.amounts.map(a => a.amount === 0 ? '' : `${fmtAmount(a.amount, mult)} ${translateUnits(a.unit)}`)
                     .filter(Boolean).join(' / ')}
+                  ${i.amounts[0]?.original ? `<span class="original-unit">(${i.amounts[0].original})</span>` : ''}
                 </span>
                 <span>${i.name}</span>
               </div>`).join('')}
@@ -399,12 +419,12 @@ function renderDetail() {
       </div>
 
       <div>
-        <h3 style="font-size:16px;font-weight:500;margin-bottom:12px">${language.Details_Instructions}</h3>
+        <h3>${language.Details_Instructions}</h3>
         <div class="steps-list">
           ${(() => {
             let counter = 1;
             return Object.entries(r.steps).map(([header, steps]) => `
-              ${header !== 'none' ? `<div class="ing-header">${header}</div>` : ''}
+              ${header !== 'none' ? `<div><h3>${header}</h3></div>` : ''}
               ${steps.map(s => `
                 <div class="step-row">
                   <div class="step-num">${counter++}</div>
@@ -483,17 +503,31 @@ function saveEdit() {
   const rawIngs = parseSection(document.getElementById('edit-ingredients').value);
   const ingredients = Object.fromEntries(
     Object.entries(rawIngs).map(([h, lines]) => [h,
-      lines.map(line => {
+      lines.map((line, idx) => {
         const [amountsPart, ...nameParts] = line.split('|');
         const name = nameParts.join('|').trim();
-        const amounts = amountsPart.split('/').map(s => {
+
+        // Find the matching ingredient from before the edit, by name first,
+        // falling back to position so we can carry over `original` if unchanged.
+        const prevIng = r.ingredients[h]?.find(p => p.name === name) || r.ingredients[h]?.[idx];
+
+        const amounts = amountsPart.split('/').map((s, ai) => {
           const [amount, unit] = s.trim().split(' ');
-          return { amount: parseFloat(amount) || 0, unit: unit || '' };
+          const parsedAmount = parseFloat(amount) || 0;
+          const parsedUnit = unit || '';
+          const prevAmt = prevIng?.amounts?.[ai];
+          const original = (prevAmt && prevAmt.amount === parsedAmount && prevAmt.unit === parsedUnit)
+            ? prevAmt.original
+            : null;
+          return { amount: parsedAmount, unit: parsedUnit, original };
         });
+
         return { name, amounts };
       })
     ])
   );
+
+  const hasConversions = Object.values(ingredients).flat().some(i => i.amounts[0]?.original);
 
   let image = r.image || null;
   const newImg = document.getElementById('img-preview')?.querySelector('img');
@@ -507,7 +541,7 @@ function saveEdit() {
     servings: parseInt(document.getElementById('edit-servings').value) || r.servings,
     ingredients,
     steps: parseSection(document.getElementById('edit-steps').value),
-    hasConversions: false
+    hasConversions
   };
 
   recipes = recipes.map(x => x.id === detailId ? updated : x);
@@ -539,21 +573,21 @@ document.getElementById('browse-results').addEventListener('click', e => {
   }
 });
 
-// Search
-const sq = document.getElementById('sq');
-if (sq) sq.addEventListener('input', e => {
-  searchQ = e.target.value;
-  renderResults();
-});
-
-// Ingredient filter
-const iq = document.getElementById('iq');
-if (iq) iq.addEventListener('input', e => {
-  ingFilter = e.target.value;
-  renderResults();
-});
-
 function attachEvents() {
+  // Search
+  const sq = document.getElementById('sq');
+  if (sq) sq.addEventListener('input', e => {
+    searchQ = e.target.value;
+    renderResults();
+  });
+
+  // Ingredient filter
+  const iq = document.getElementById('iq');
+  if (iq) iq.addEventListener('input', e => {
+    ingFilter = e.target.value;
+    renderResults();
+  });
+
   // Navigation
   document.querySelectorAll('[data-v]').forEach(b => {
     b.addEventListener('click', () => {
@@ -660,7 +694,8 @@ async function parseRecipe() {
 - if an ingredient has multiple amounts/units (e.g. "5dl (300g)"), list each as a separate object in amounts
 - if only one amount, amounts still has just one entry
 - unit: can be g, kg, ml, l, tbsp, tsp, tl, rkl, dl, cup, oz, lb, fl oz, or empty string for countable items — preserve the original unit from the source exactly, do not convert units yourself
-- steps is an object where keys are section headers (use "none" if no sections), do not include step numbers`
+- steps is an object where keys are section headers (use "none" if no sections), do not include step numbers
+- if steps mention imperial units (cup, °F, oz, tbsp, tsp, lb, pint, quart...), convert them to metric and show the original in brackets, e.g. "Preheat oven to 180°C (350°F)" — round temperatures to the nearest 5°C and volumes/weights to sensible cooking precision`
   });
 
   try {
