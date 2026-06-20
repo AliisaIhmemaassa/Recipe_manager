@@ -93,6 +93,14 @@ const langsList =
     All: 'All',
     Back: 'Back',
 
+    Add_head: 'Add recipe',
+    Add_importWai: 'Import with AI',
+    Add_text_head: 'Paste recipe text',
+    Add_text_placehold: 'Paste any recipe — from a website, a book, or just a description…',
+    Add_img_head: 'Or upload an image of a recipe',
+    Add_img_placehold: 'Click to upload images',
+    Add_parseBtn: 'Parse with AI',
+
     Browse_head: 'Recipes',
     Browse_search_1: 'Search recipes or ingredients…',
     Browse_search_span: 'Filter by ingredients I have (comma-separated)',
@@ -105,8 +113,13 @@ const langsList =
     Deatails_UnitsConverted: 'Some units have been converted from imperial to metric. Original values shown in brackets.',
     Details_Servings: 'Servings',
 
+    LanguageBtn: 'Suomeksi',
+
     Savory: 'savory',
-    Sweet: 'sweet'
+    Sweet: 'sweet',
+
+    ThemeD: 'Dark theme',
+    ThemeL: 'Light theme'
 
       
   },
@@ -115,6 +128,14 @@ const langsList =
     Add: 'Lisää',
     All: 'Kaikki',
     Back: 'Takaisin',
+
+    Add_head: 'Lisää resepti',
+    Add_importWai: 'Tuo ai:lla',
+    Add_text_head: 'Liitä resepti tekstinä',
+    Add_text_placehold: 'Liitä resepti — nettisibulta, kirjasta tai vain kuvaus...',
+    Add_img_head: 'Tai lataa kuva reseptistä',
+    Add_img_placehold: 'Klikkaa lisätäksesi kuvia',
+    Add_parseBtn: 'Jäsennä AI:lla',
 
     Browse_head: 'Reseptit',
     Browse_search_1: 'Etsi reseptejä tai ainesosia…',
@@ -128,8 +149,13 @@ const langsList =
     Details_UnitsConverted: 'Joitain arvoja on muunnettu metrijärjestelmään. Alkuperäiset suluissa.',
     Details_Servings: 'Annokset',
 
+    LanguageBtn: 'In english',
+
     Savory: 'suolainen',
-    Sweet: 'makea'
+    Sweet: 'makea',
+
+    ThemeD: 'Tumma teema',
+    ThemeL: 'Vaalea teema'
   }
 }
 
@@ -140,7 +166,25 @@ function changeLanguage() {
   currentLang = currentLang === 'english' ? 'finnish' : 'english';
   language = langsList[currentLang];
   localStorage.setItem('language', currentLang);
+
+  // language btn
+  document.querySelectorAll('.lang-btn').forEach(btn => {
+    btn.textContent = language.LanguageBtn;
+  });
+
+  // thmem btn
+  const IsDark = localStorage.getItem('theme') === 'dark';
+  document.querySelectorAll('.theme-btn').forEach(btn => {
+    btn.textContent = IsDark ? language.ThemeL : language.ThemeD;
+  });
+
   render();
+}
+
+function initLanguage() {
+  document.querySelectorAll('.lang-btn').forEach(btn => {
+    btn.textContent = language.LanguageBtn;
+  });
 }
 
 // ── Translate units ───────────────────────────────────────────────────────────
@@ -318,7 +362,7 @@ function renderResults() {
             <div class="recipe-card-body">
               <h3>${r.name}</h3>
               <div class="meta"><i class="ti ti-clock" aria-hidden="true"></i> ${r.time} min &nbsp;<i class="ti ti-users" aria-hidden="true"></i> ${r.servings}</div>
-              <div class="tags">${r.tags.map(t => `<span class="pill">${t}</span>`).join('')}</div>
+              <div class="tags">${r.tags.map(t => `<span class="pill">${t === 'sweet' ? language.Sweet : language.Savory}</span>`).join('')}</div>
             </div>
           </div>`).join('')}
         </div>`
@@ -338,23 +382,23 @@ function renderAdd() {
   const div = document.getElementById('add-tab');
   div.innerHTML = `
     <div class="topbar">
-      <button class="view-btn" data-v="browse"><i class="ti ti-arrow-left"></i> Back</button>
-      <h1>Add recipe</h1>
+      <button class="back-btn" data-v="browse"><i class="ti ti-arrow-left"></i> ${language.Back}</button>
+      <h1>${language.Add_head}</h1>
     </div>
     <div class="panel">
-      <h2>Import with AI</h2>
-      <label>Paste recipe text</label>
-      <textarea id="paste-input" placeholder="Paste any recipe — from a website, a book, or just a description…"></textarea>
-      <label>Or upload a photo / image of a recipe</label>
+      <h2>${language.Add_importWai}</h2>
+      <label>${language.Add_text_head}</label>
+      <textarea id="paste-input" placeholder="${language.Add_text_placehold}"></textarea>
+      <label>${language.Add_img_head}</label>
       <div class="upload-area" id="upload-area">
         <i class="ti ti-camera" aria-hidden="true"></i>
-        Click to upload images
+        ${language.Add_img_placehold}
       </div>
       <input type="file" id="file-input" accept="image/*" multiple>
       <div id="img-preview" class="add-img"></div>
       <div class="btn-row">
         <button class="btn-primary" id="parse-btn">
-          <i class="ti ti-wand" aria-hidden="true"></i> Parse with AI
+          <i class="ti ti-wand" aria-hidden="true"></i> ${language.Add_parseBtn}
         </button>
       </div>
       <div class="status" id="parse-status"></div>
@@ -370,7 +414,7 @@ function renderDetail() {
   const isUser = recipes.find(x => x.id === detailId);
   div.innerHTML = `
     <div class="topbar">
-      <button class="view-btn" data-v="browse"><i class="ti ti-arrow-left"></i> ${language.Back}</button>
+      <button class="back-btn" data-v="browse"><i class="ti ti-arrow-left"></i> ${language.Back}</button>
       <h1>${r.name}</h1>
       ${isUser ? `
         <button class="btn-danger" id="delete-btn" aria-label="Delete recipe"><i class="ti ti-trash" aria-hidden="true"></i></button>
@@ -384,7 +428,7 @@ function renderDetail() {
 
       <div class="detail-meta">
         <span><i class="ti ti-clock" aria-hidden="true"></i>${r.time} min</span>
-        ${r.tags.map(t => `<span class="pill">${t}</span>`).join('')}
+        ${r.tags.map(t => `<span class="pill">${t === 'sweet' ? language.Sweet : language.Savory}</span>`).join('')}
       </div>
       ${r.hasConversions ? `
 
@@ -443,7 +487,7 @@ function renderEdit() {
   const div = document.getElementById('add-tab');
   div.innerHTML = `
     <div class="topbar">
-      <button class="view-btn" data-v="detail"><i class="ti ti-arrow-left"></i> ${language.Back}</button>
+      <button class="back-btn" data-v="detail"><i class="ti ti-arrow-left"></i> ${language.Back}</button>
       <h1>Edit recipe</h1>
     </div>
     <div class="panel">
@@ -733,6 +777,28 @@ async function parseRecipe() {
   }
 }
 
+// ── Toggle theme ────────────────────────────────────────────────────────────────
+
+function applyTheme() {
+    const isDark = localStorage.getItem('theme') === 'dark';
+    document.documentElement.setAttribute('data-theme', isDark ? 'dark' : 'light');
+    document.querySelectorAll('.theme-btn').forEach(btn => {
+        btn.textContent = isDark ? language.ThemeL : language.ThemeD;
+    });
+}
+
+function toggleTheme() {
+    const isDark = localStorage.getItem('theme') === 'dark';
+    const newTheme = isDark ? 'light' : 'dark';
+    localStorage.setItem('theme', newTheme);
+    document.documentElement.setAttribute('data-theme', newTheme);
+    document.querySelectorAll('.theme-btn').forEach(btn => {
+        btn.textContent = newTheme === 'dark' ? language.ThemeL : language.ThemeD;
+    });
+}
+
 // ── Init ──────────────────────────────────────────────────────────────────────
 
 render();
+applyTheme();
+initLanguage();

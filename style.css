@@ -111,9 +111,35 @@ button:active { transform: scale(0.98); }
   flex: 1;
 }
 
-/* View buttons */
-.view-btn,
+.back-btn {
+  background: transparent;
+  border: 0.5px solid var(--border-hover);
+  padding: 6px 12px;
+  font-size: 13px;
+  min-width: 90px;
+  color: var(--text-secondary);
+}
+
 .theme-btn {
+  background: transparent;
+  border: 0.5px solid var(--border-hover);
+  padding: 6px 12px;
+  font-size: 13px;
+  min-width: 110px;
+  color: var(--text-secondary);
+}
+
+.lang-btn {
+  background: transparent;
+  border: 0.5px solid var(--border-hover);
+  padding: 6px 12px;
+  font-size: 13px;
+  min-width: 110px;
+  color: var(--text-secondary);
+}
+
+/* View buttons */
+.view-btn {
   background: transparent;
   border: 0.5px solid var(--border-hover);
   padding: 6px 12px;
@@ -167,6 +193,16 @@ button:active { transform: scale(0.98); }
 }
 
 /* Recipe grid */
+
+.browse-tab {
+  background: var(--surface);
+  border: 0.5px solid var(--border);
+  border-radius: var(--radius);
+  padding: 1.5rem;
+  margin-top: 1.25rem;
+  margin-bottom: 1.25rem;
+}
+
 .grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
