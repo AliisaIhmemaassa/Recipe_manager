@@ -1,6 +1,5 @@
-// ── Storage ──────────────────────────────────────────────────────────────────
-
 const STORAGE_KEY = 'recipe_manager_v1';
+const SESSION_KEY = 'recipe_manager_session_v1';
 
 function loadRecipes() {
   try {
@@ -13,14 +12,33 @@ function saveRecipes(r) {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(r));
 }
 
+// Remembers which page (and which recipe / servings) you had open, so a reload
+// lands you back where you were instead of resetting to the browse screen.
+function loadSession() {
+  try {
+    const d = localStorage.getItem(SESSION_KEY);
+    return d ? JSON.parse(d) : null;
+  } catch { return null; }
+}
+
+function saveSession() {
+  try {
+    localStorage.setItem(SESSION_KEY, JSON.stringify({ view, detailId, servingsMultiplier, filterTag }));
+  } catch { /* storage unavailable — fail silently, app still works without persistence */ }
+}
+
 // ── State ─────────────────────────────────────────────────────────────────────
 
+const VALID_VIEWS = ['browse', 'add', 'detail', 'edit'];
+const session = loadSession();
+
 let recipes = loadRecipes();
-let view = 'browse';      // browse | add | detail | cook
-let detailId = null;
+let view = (session && VALID_VIEWS.includes(session.view)) ? session.view : 'browse';      // browse | add | detail | cook
+let detailId = session?.detailId ?? null;
+let servingsNum = '';
 let cookingSteps = [];
-let servingsMultiplier = 1;
-let filterTag = 'all';
+let servingsMultiplier = session?.servingsMultiplier ?? 1;
+let filterTag = session?.filterTag ?? 'all';
 let searchQ = '';
 let ingFilter = '';
 let uploadedImages = [];
@@ -114,6 +132,8 @@ const langsList =
     Details_Servings: 'Servings',
 
     LanguageBtn: 'Suomeksi',
+    Images_selected: 'image selected',
+    Images2_selected: 'images selected',
 
     Savory: 'savory',
     Sweet: 'sweet',
@@ -150,6 +170,9 @@ const langsList =
     Details_Servings: 'Annokset',
 
     LanguageBtn: 'In english',
+
+    Images_selected: 'kuva valittu',
+    Images2_selected: 'kuvia valittu',
 
     Savory: 'suolainen',
     Sweet: 'makea',
@@ -305,6 +328,7 @@ function render() {
     renderSearch();
     renderPills();
     renderResults();
+    servingsNum = '';
   } else if (view === 'add') {
     addTab.style.display = 'block';
     renderAdd();
@@ -317,6 +341,7 @@ function render() {
   }
 
   attachEvents();
+  saveSession();
 }
 
 function renderSearch() {
@@ -362,7 +387,7 @@ function renderResults() {
             <div class="recipe-card-body">
               <h3>${r.name}</h3>
               <div class="meta"><i class="ti ti-clock" aria-hidden="true"></i> ${r.time} min &nbsp;<i class="ti ti-users" aria-hidden="true"></i> ${r.servings}</div>
-              <div class="tags">${r.tags.map(t => `<span class="pill">${t === 'sweet' ? language.Sweet : language.Savory}</span>`).join('')}</div>
+              <div class="tags">${r.tags.map(t => `<span class="pill${t === 'sweet' ? ' pill-sweet' : ''}">${t === 'sweet' ? language.Sweet : language.Savory}</span>`).join('')}</div>
             </div>
           </div>`).join('')}
         </div>`
@@ -371,7 +396,7 @@ function renderResults() {
 
 function debug() {
   recipes = JSON.parse(localStorage.getItem('recipe_manager_v1'));
-  recipes = recipes.filter(x => x.id !== 'r111111111111111'); // replace with the actual id
+  recipes = recipes.filter(x => x.id !== 'r1781989988750'); // replace with the actual id
   //recipes = recipes.filter(x => x.id !== 'r1781776548504');
   //recipes = recipes.filter(x => x.id !== 'r1781771903948');
   localStorage.setItem('recipe_manager_v1', JSON.stringify(recipes));
@@ -412,6 +437,9 @@ function renderDetail() {
   if (!r) { view = 'browse'; render(); return; }
   const mult = servingsMultiplier;
   const isUser = recipes.find(x => x.id === detailId);
+  servingsMultiplier = servingsMultiplier === 0 ? 1 : servingsMultiplier
+  servingsNum = servingsNum === '' ? 'x 1' : servingsNum
+
   div.innerHTML = `
     <div class="topbar">
       <button class="back-btn" data-v="browse"><i class="ti ti-arrow-left"></i> ${language.Back}</button>
@@ -428,7 +456,7 @@ function renderDetail() {
 
       <div class="detail-meta">
         <span><i class="ti ti-clock" aria-hidden="true"></i>${r.time} min</span>
-        ${r.tags.map(t => `<span class="pill">${t === 'sweet' ? language.Sweet : language.Savory}</span>`).join('')}
+        ${r.tags.map(t => `<span class="pill${t === 'sweet' ? ' pill-sweet' : ''}">${t === 'sweet' ? language.Sweet : language.Savory}</span>`).join('')}
       </div>
       ${r.hasConversions ? `
 
@@ -440,7 +468,7 @@ function renderDetail() {
       <div class="servings-ctrl">
         <span>${language.Details_Servings}</span>
         <button class="sctl-btn" id="serv-down" aria-label="Fewer servings">−</button>
-        <span class="count" id="serv-count">${Math.round(r.servings * mult)}</span>
+        <span class="count" id="serv-count">${servingsNum}</span>
         <button class="sctl-btn" id="serv-up" aria-label="More servings">+</button>
       </div>
 
@@ -502,7 +530,7 @@ function renderEdit() {
       </div>
 
       <label>Name</label>
-      <input type="text" id="edit-name" value="${r.name}">
+      <input type="text" id="edit-name" maxlength="70" value="${r.name}">
       <label>Time (min)</label>
       <input type="number" id="edit-time" value="${r.time}">
       <label>Servings</label>
@@ -641,19 +669,61 @@ function attachEvents() {
     });
   });
 
-  // Servings
-  const r = getRecipes().find(x => x.id === detailId);
+  // Servings amounts
+  /*const r = getRecipes().find(x => x.id === detailId);
+  const s = r ? r.servings : NaN1
   const sd = document.getElementById('serv-down');
-  if (sd && r) sd.addEventListener('click', () => {
-    const cur = Math.round(r.servings * servingsMultiplier);
-    if (cur > 1) servingsMultiplier = (cur - 1) / r.servings;
+  if (r && s === 'none') sd.addEventListener('click', () => {
+    const cur = servingsMultiplier;
+    if (cur >= 0.1) servingsMultiplier = cur / 2;
+    servingsNum = 'x' + ' ' + servingsMultiplier;
     render();
   });
-  const su = document.getElementById('serv-up');
-  if (su && r) su.addEventListener('click', () => {
-    const cur = Math.round(r.servings * servingsMultiplier);
-    servingsMultiplier = (cur + 1) / r.servings;
+  else if (sd) sd.addEventListener('click', () => {
+    const cur = Math.round(s * servingsMultiplier);
+    if (cur > 1) servingsMultiplier = (cur - 1) / r.servings;
+    servingsNum = Math.round(s * servingsMultiplier)
     render();
+  });
+
+  const su = document.getElementById('serv-up');
+  if (r && s === 'none') su.addEventListener('click', () => {
+    const cur = servingsMultiplier;
+    if (cur <= 20) servingsMultiplier = cur + 1;
+    servingsNum = 'x' + ' ' + servingsMultiplier;
+    render();
+  });
+  else if (su) su.addEventListener('click', () => {
+    const cur = Math.round(s * servingsMultiplier);
+    servingsMultiplier = (cur + 1) / s;
+    servingsNum = Math.round(s * servingsMultiplier)
+    render();
+  });*/
+
+  // Servings multiply
+  const r = getRecipes().find(x => x.id === detailId);
+  const sd = document.getElementById('serv-down');
+  if (r && sd) sd.addEventListener('click', () => {
+    const cur = servingsMultiplier;
+    if (cur > 0.1) {
+      if (cur <= 2 && cur > 0.25) {servingsMultiplier = cur - 0.25}
+      else if (cur > 2) {servingsMultiplier = cur - 1}
+      else if (cur === 0.25) {servingsMultiplier = 0.1}
+      servingsNum = 'x' + ' ' + servingsMultiplier;
+      render();
+    }
+  });
+
+  const su = document.getElementById('serv-up');
+  if (r && su) su.addEventListener('click', () => {
+    const cur = servingsMultiplier;
+    if (cur < 10) {
+      if (cur < 2 && cur >=0.25) {servingsMultiplier = cur + 0.25}
+      else if (cur >= 2) {servingsMultiplier = cur + 1}
+      else if (cur === 0.1) {servingsMultiplier = 0.25}
+      servingsNum = 'x' + ' ' + servingsMultiplier;
+      render();
+    }
   });
 
   // Edit recipe
@@ -683,25 +753,60 @@ function attachEvents() {
     fi.addEventListener('change', e => {
       const files = Array.from(e.target.files);
       if (!files.length) return;
-      const prev = document.getElementById('img-preview');
-      
+
+      let loaded = 0;
       files.forEach(file => {
         const reader = new FileReader();
         reader.onload = ev => {
           uploadedImages.push({ data: ev.target.result.split(',')[1], type: file.type || 'image/jpeg' });
-          if (prev) prev.innerHTML += `<img src="${ev.target.result}" style="max-width:120px;max-height:120px;border-radius:8px;border:0.5px solid rgba(0,0,0,0.12)">`;
+          loaded++;
+          if (loaded === files.length) {
+            renderImagePreviews();
+            updateUploadAreaLabel();
+          }
         };
         reader.readAsDataURL(file);
       });
 
-      const ua2 = document.getElementById('upload-area');
-      if (ua2) ua2.innerHTML = `<i class="ti ti-check" aria-hidden="true"></i> ${files.length} image(s) selected`;
+      fi.value = ''; // allows re-selecting the same file later
     });
   }
 
   // Parse button
   const pb = document.getElementById('parse-btn');
   if (pb) pb.addEventListener('click', parseRecipe);
+}
+
+// ── Image upload ────────────────────────────────────────────────────────────────
+
+function renderImagePreviews() {
+  const prev = document.getElementById('img-preview');
+  if (!prev) return;
+  prev.innerHTML = uploadedImages.map((img, i) => `
+    <div class="img-thumb">
+      <img src="data:${img.type};base64,${img.data}">
+      <button type="button" class="img-remove-btn" data-index="${i}" aria-label="Remove image">&times;</button>
+    </div>
+  `).join('');
+
+  prev.querySelectorAll('.img-remove-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const idx = parseInt(btn.dataset.index, 10);
+      uploadedImages.splice(idx, 1);
+      renderImagePreviews();
+      updateUploadAreaLabel();
+    });
+  });
+}
+
+function updateUploadAreaLabel() {
+  const ua2 = document.getElementById('upload-area');
+  if (!ua2) return;
+  if (uploadedImages.length === 0) {
+    ua2.innerHTML = `<i class="ti ti-upload" aria-hidden="true"></i> ${language.Add_img_placehold}`; // adjust to your default label
+  } else {
+    ua2.innerHTML = `<i class="ti ti-check" aria-hidden="true"></i> ${uploadedImages.length} ${uploadedImages.length > 1 ? language.Images2_selected : language.Images_selected}`;
+  }
 }
 
 // ── AI Parsing ────────────────────────────────────────────────────────────────
@@ -713,11 +818,13 @@ async function parseRecipe() {
 
   if (!text && uploadedImages.length === 0) {
     status.textContent = 'Please paste text or upload an image first.';
+    status.classList.add('status-error');
     return;
   }
 
   btn.disabled = true;
   status.textContent = 'Parsing with AI…';
+  status.classList.remove('status-error');
 
   const userContent = [];
 
@@ -734,6 +841,7 @@ async function parseRecipe() {
 {"name":"string","servings":number,"time":number,"tags":["string"],"ingredients":{"Header name":[{"name":"string","amounts":[{"amount":number,"unit":"string"}]}]},"steps":{"Section name":["string"]}}
 - time: integer in total minutes (estimate if not given, no unit)
 - tags: 'sweet' or 'savory' (Only one!)
+- servings: if the recipe does NOT explicitly state the number of servings, return "none". DO NOT guess, estimate, infer, or calculate servings from ingredient amounts. If it's not written, it's "none".
 - ingredients is an object where keys are section headers (use "none" if no sections)
 - if an ingredient has multiple amounts/units (e.g. "5dl (300g)"), list each as a separate object in amounts
 - if only one amount, amounts still has just one entry
@@ -773,6 +881,7 @@ async function parseRecipe() {
     render();
   } catch (e) {
     status.textContent = 'Could not parse recipe. Try pasting more text, or a clearer image.';
+    status.classList.add('status-error');
     btn.disabled = false;
   }
 }
