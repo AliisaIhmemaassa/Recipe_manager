@@ -10,7 +10,7 @@ async function unlock() {
     const errEl = document.getElementById('lock-error');
     const { error } = await sb.auth.signInWithPassword({ email, password });
     if (error) {
-        errEl.textContent = 'Väärä salasana.';
+        errEl.textContent = language.WrongPass;
         errEl.style.display = 'block';
         document.getElementById('lock-input').value = '';
         document.getElementById('lock-input').focus();
@@ -32,6 +32,14 @@ async function showApp() {
     document.getElementById('lock-input').value = '';
     await loadRecipes();
     console.log(recipes);
+    render();
+}
+
+function noLogShowApp() {
+    document.getElementById('lock-screen').style.display = 'none';
+    document.getElementById('app').style.display = 'block';
+    document.getElementById('email-input').value = '';
+    document.getElementById('lock-input').value = '';
     render();
 }
 
@@ -197,14 +205,16 @@ const langsList =
     Deatails_UnitsConverted: 'Some units have been converted from imperial to metric. Original values shown in brackets.',
     Details_Servings: 'Servings',
 
-    Lock_give_pass: 'Input password',
     Lock_head: 'Recipe archive',
+    Lock_subhead: 'Log in to continue',
     Lock_email: 'Email',
     Lock_logIn: 'Log in',
     Lock_pass: 'Password',
     Lock_tryAgain: 'Try again',
 
     LanguageBtn: 'Suomeksi',
+    Logout: 'Log out',
+
     Images_selected: 'image selected',
     Images2_selected: 'images selected',
 
@@ -212,9 +222,9 @@ const langsList =
     Sweet: 'sweet',
 
     ThemeD: 'Dark theme',
-    ThemeL: 'Light theme'
+    ThemeL: 'Light theme',
 
-      
+    WrongPass: 'Incorrect email or password'
   },
 
   finnish: {
@@ -242,14 +252,15 @@ const langsList =
     Details_UnitsConverted: 'Joitain arvoja on muunnettu metrijärjestelmään. Alkuperäiset suluissa.',
     Details_Servings: 'Annokset',
 
-    Lock_give_pass: 'Anna salasana',
     Lock_head: 'Resepti arkisto',
+    Lock_subhead: 'Kirjaudu sisään jatkaaksesi',
     Lock_email: 'Sähköposti',
     Lock_logIn: 'Kirjaudu sisään',
     Lock_pass: 'Salasana',
     Lock_tryAgain: 'Yritä uudelleen',
 
     LanguageBtn: 'In english',
+    Logout: 'Kirjaudu ulos',
 
     Images_selected: 'kuva valittu',
     Images2_selected: 'kuvia valittu',
@@ -258,7 +269,9 @@ const langsList =
     Sweet: 'makea',
 
     ThemeD: 'Tumma teema',
-    ThemeL: 'Vaalea teema'
+    ThemeL: 'Vaalea teema',
+
+    WrongPass: 'Väärä sähköposti tai salasana'
   }
 }
 
@@ -281,6 +294,9 @@ function changeLanguage(from) {
     btn.textContent = IsDark ? language.ThemeL : language.ThemeD;
   });
 
+  const lbtn = document.getElementById('logout-btn');
+  lbtn.textContent = language.Logout;
+
   from.id === 'lang-btn-l' ? renderLock() : render()
 }
 
@@ -288,6 +304,8 @@ function initLanguage() {
   document.querySelectorAll('.lang-btn').forEach(btn => {
     btn.textContent = language.LanguageBtn;
   });
+  const lbtn = document.getElementById('logout-btn');
+  lbtn.textContent = language.Logout;
 }
 
 // ── Translate units ───────────────────────────────────────────────────────────
@@ -399,12 +417,18 @@ function renderLock() {
   const textp = document.getElementById('lock-input')?.value ?? '';
   const div = document.getElementById('lock-box');
   div.innerHTML = `
-    <h2>${language.Lock_head}</h2>
-    <p>${language.Lock_give_pass}</p>
-    <input type="email" id="email-input" placeholder="${language.Lock_email}">
-    <input type="password" id="lock-input" placeholder="${language.Lock_pass}">
-    <button id="lock-btn" class="lock-btn" onclick="unlock()">${language.Lock_logIn}</button>
-    <div id="lock-error" class="lock-error">${language.Lock_tryAgain}</div>
+    <div>
+      <h2>${language.Lock_head}</h2>
+      <p>${language.Lock_subhead}</p>
+      <input type="email" id="email-input" placeholder="${language.Lock_email}">
+      <input type="password" id="lock-input" placeholder="${language.Lock_pass}">
+      <button class="lock-btn" id="lock-btn" onclick="unlock()">${language.Lock_logIn}</button>
+      <div class="lock-error" id="lock-error">${language.Lock_tryAgain}</div>
+    </div>
+    <div>
+      <p>Or continue without logging in</p>
+      <button class="lock-btn" id="nonlock-btn" onclick="noLogShowApp()">Continue</button>
+    </div>
   `;
   document.getElementById('lock-input').addEventListener('keydown', e => {
     if (e.key === 'Enter') unlock();
