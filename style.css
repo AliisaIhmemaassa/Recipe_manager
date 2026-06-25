@@ -165,6 +165,10 @@ a:focus-visible {
 .topbar h1 {
   font-size: 18px;
   flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 /*.top-btn {
@@ -191,6 +195,7 @@ a:focus-visible {
   font-size: 13px;
   min-width: 90px;
   color: var(--text-muted);
+  flex-shrink: 0;
 }
 
 .theme-btn, .lang-btn, .logout-btn { min-width: 110px; }
@@ -211,6 +216,7 @@ a:focus-visible {
   padding: 6px 12px;
   font-size: 13px;
   color: var(--text-muted);
+  flex-shrink: 0;
 }
 
 .view-btn:hover {
@@ -512,6 +518,7 @@ input[type=file] { display: none; }
   border: 1px solid var(--border);
   padding: 8px 12px;
   color: var(--danger);
+  flex-shrink: 0;
 }
 .btn-danger:hover { background: var(--danger-light); border-color: var(--danger); }
 
