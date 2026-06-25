@@ -156,6 +156,7 @@ a:focus-visible {
 .topbar {
   display: flex;
   align-items: center;
+  justify-content: space-between;
   gap: 12px;
   padding: 1.25rem 0 1rem;
   border-bottom: 1px solid var(--border);
@@ -166,9 +167,24 @@ a:focus-visible {
   flex: 1;
 }
 
+/*.top-btn {
+  background: transparent;
+  border: 1px solid var(--border);
+  padding: 6px 12px;
+  font-size: 13px;
+  min-width: 110px;
+  color: var(--text-muted);
+}
+.top-btn:hover {
+  background: var(--surface);
+  border-color: var(--text);
+  color: var(--text);
+}*/
+
 .back-btn,
 .theme-btn,
-.lang-btn {
+.lang-btn,
+.logout-btn {
   background: transparent;
   border: 1px solid var(--border);
   padding: 6px 12px;
@@ -176,10 +192,13 @@ a:focus-visible {
   min-width: 90px;
   color: var(--text-muted);
 }
-.theme-btn, .lang-btn { min-width: 110px; }
+
+.theme-btn, .lang-btn, .logout-btn { min-width: 110px; }
+
 .back-btn:hover,
 .theme-btn:hover,
-.lang-btn:hover {
+.lang-btn:hover,
+.logout-btn:hover {
   background: var(--surface);
   border-color: var(--text);
   color: var(--text);
